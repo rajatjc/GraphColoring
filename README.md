@@ -23,13 +23,13 @@ To run the project locally, follow these steps:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/your-username/online-graph-coloring.git
+   git clone https://github.com/rajatjc/GraphColoring.git
    ```
 
 2. Navigate to the project directory:
 
    ```bash
-   cd online-graph-coloring
+   cd GraphColoring
    ```
 
 3. Install the required packages using pip:
