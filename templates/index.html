@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Graph Coloring</title>
+	<style>
+		h1 {
+			color: #008080;
+			font-size: 2em;
+			text-align: center;
+		}	form {
+		max-width: 600px;
+		margin: 0 auto;
+		background-color: #f7f7f7;
+		padding: 20px;
+		border-radius: 10px;
+		box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+	}
+    .main-container {
+			display: flex;
+			justify-content: space-between;
+			flex-wrap: wrap;
+			margin: 0 auto;
+			{#max-width: auto;#}
+		}
+
+	label {
+		display: block;
+		margin-bottom: 10px;
+		font-size: 1.2em;
+		color: #333;
+	}
+
+	input, select {
+		display: block;
+		width: 100%;
+		padding: 10px;
+		margin-bottom: 20px;
+		border: none;
+		border-radius: 5px;
+		box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+		font-size: 1.1em;
+	}
+
+	button[type=submit] {
+		background-color: #008080;
+		color: #fff;
+		padding: 10px 20px;
+		border: none;
+		border-radius: 5px;
+		font-size: 1.2em;
+		cursor: pointer;
+	}
+        .container {
+    max-width: 600px;
+    background-color: #f7f7f7;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    font-size: 1.5em;
+    color: #333;
+    text-align: center;
+    margin: 0 auto;
+    margin-bottom: 20px;
+            margin-top: 20px;
+}
+
+.data-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1em;
+    color: #333;
+    padding: 20px;
+}
+
+	button[type=submit]:hover {
+		background-color: #006666;
+	}
+</style>
+</head>
+<body>
+	<h1>Graph Coloring</h1>
+
+<div class="main-container">
+	<form METHOD="POST">
+		<label for="chromatic-number">Chromatic number (k):</label>
+		<input type="number" id="chromatic-number" name="chromatic-number" min="1" required>	<label for="number-of-vertices">Number of vertices (n):</label>
+	<input type="number" id="number-of-vertices" name="number-of-vertices" min="1" required>
+
+	<label for="number-of-instances">Number of instances (N):</label>
+	<input type="number" id="number-of-instances" name="number-of-instances" min="1" required>
+
+	<label for="coloring-method">Coloring method:</label>
+	<select id="coloring-method" name="coloring-method">
+		<option value="first-fit">First fit</option>
+		<option value="cbip">cbip</option>
+	</select>
+    <p style="color: red;">Note: Chromatic Number K for CBIF is fixed to 2 and does not do anything even if you set it</p>
+	<button type="submit">Check</button>
+</form>
+    {% if image %}
+ <div class="container">
+	<div class="data-container"> One of the Randomly Generated Graph
+    </div>
+     <div class="data-container"> Method: {{ method }}
+    </div>
+
+
+ <div class="data-container">
+
+    <img src="{{ url_for('static', filename='my_plot.png') }}">
+
+ </div>
+ <div class="data-container">Average Competitive Ratio:{{ data }}
+    </div>
+ </div>
+     {% endif %}
+
+</div>
+</body>
+</html>
+
+
+
+
+
+	
