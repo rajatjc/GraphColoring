@@ -7,6 +7,3 @@ venv/
 .DS_Store
 .idea/
 .vscode/
-
-# Written by the app on every request
-static/my_plot.png

@@ -83,36 +83,43 @@
 
 <div class="main-container">
 	<form METHOD="POST">
+		{% if errors %}
+		<ul style="color: #b00020;">
+			{% for error in errors %}<li>{{ error }}</li>{% endfor %}
+		</ul>
+		{% endif %}
 		<label for="chromatic-number">Chromatic number (k):</label>
-		<input type="number" id="chromatic-number" name="chromatic-number" min="1" required>	<label for="number-of-vertices">Number of vertices (n):</label>
-	<input type="number" id="number-of-vertices" name="number-of-vertices" min="1" required>
+		<input type="number" id="chromatic-number" name="chromatic-number" min="1" max="10" value="{{ form.get('chromatic-number', 3) }}" required>
+	<label for="number-of-vertices">Number of vertices (n):</label>
+	<input type="number" id="number-of-vertices" name="number-of-vertices" min="1" max="500" value="{{ form.get('number-of-vertices', 30) }}" required>
 
 	<label for="number-of-instances">Number of instances (N):</label>
-	<input type="number" id="number-of-instances" name="number-of-instances" min="1" required>
+	<input type="number" id="number-of-instances" name="number-of-instances" min="1" max="500" value="{{ form.get('number-of-instances', 100) }}" required>
 
 	<label for="coloring-method">Coloring method:</label>
 	<select id="coloring-method" name="coloring-method">
 		<option value="first-fit">First fit</option>
-		<option value="cbip">cbip</option>
+		<option value="cbip" {% if form.get('coloring-method') == 'cbip' %}selected{% endif %}>CBIP</option>
 	</select>
-    <p style="color: red;">Note: Chromatic Number K for CBIF is fixed to 2 and does not do anything even if you set it</p>
+    <p style="color: #555;">CBIP only works on bipartite graphs, so it always uses k = 2.</p>
 	<button type="submit">Check</button>
 </form>
-    {% if image %}
+    {% if data is defined %}
  <div class="container">
-	<div class="data-container"> One of the Randomly Generated Graph
+     <div class="data-container"> Method: {{ method }}, k = {{ k }}
     </div>
-     <div class="data-container"> Method: {{ method }}
+ <div class="data-container">Average Competitive Ratio: {{ "%.3f"|format(data) }}
     </div>
 
-
+	<div class="data-container"> Last generated graph ({{ last_colors }} colors)
+    </div>
  <div class="data-container">
-
-    <img src="{{ url_for('static', filename='my_plot.png') }}">
-
+    {% if image %}
+    <img src="data:image/png;base64,{{ image }}" alt="The last generated graph, colored by the algorithm" style="max-width: 100%;">
+    {% else %}
+    Graphs this large aren't drawn.
+    {% endif %}
  </div>
- <div class="data-container">Average Competitive Ratio:{{ data }}
-    </div>
  </div>
      {% endif %}
 
