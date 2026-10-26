@@ -1,134 +1,170 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<title>Graph Coloring</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Online Graph Coloring</title>
 	<style>
-		h1 {
-			color: #008080;
-			font-size: 2em;
-			text-align: center;
-		}	form {
-		max-width: 600px;
-		margin: 0 auto;
-		background-color: #f7f7f7;
-		padding: 20px;
-		border-radius: 10px;
-		box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-	}
-    .main-container {
-			display: flex;
-			justify-content: space-between;
-			flex-wrap: wrap;
-			margin: 0 auto;
-			{#max-width: auto;#}
+		:root {
+			--bg: #f6f7f9;
+			--card: #ffffff;
+			--text: #1f2328;
+			--muted: #5f6b7a;
+			--accent: #00796b;
+			--border: #d9dee4;
+			--error: #b3261e;
 		}
-
-	label {
-		display: block;
-		margin-bottom: 10px;
-		font-size: 1.2em;
-		color: #333;
-	}
-
-	input, select {
-		display: block;
-		width: 100%;
-		padding: 10px;
-		margin-bottom: 20px;
-		border: none;
-		border-radius: 5px;
-		box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-		font-size: 1.1em;
-	}
-
-	button[type=submit] {
-		background-color: #008080;
-		color: #fff;
-		padding: 10px 20px;
-		border: none;
-		border-radius: 5px;
-		font-size: 1.2em;
-		cursor: pointer;
-	}
-        .container {
-    max-width: 600px;
-    background-color: #f7f7f7;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-    font-size: 1.5em;
-    color: #333;
-    text-align: center;
-    margin: 0 auto;
-    margin-bottom: 20px;
-            margin-top: 20px;
-}
-
-.data-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 1em;
-    color: #333;
-    padding: 20px;
-}
-
-	button[type=submit]:hover {
-		background-color: #006666;
-	}
-</style>
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--bg: #111418;
+				--card: #1a1f25;
+				--text: #e6e9ed;
+				--muted: #9aa5b1;
+				--accent: #4db6ac;
+				--border: #2d353e;
+				--error: #f2b8b5;
+			}
+		}
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			padding: 32px 16px 64px;
+			background: var(--bg);
+			color: var(--text);
+			font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+		}
+		main { max-width: 960px; margin: 0 auto; }
+		h1 { margin: 0 0 4px; font-size: 1.8rem; }
+		.lede { margin: 0 0 24px; color: var(--muted); max-width: 65ch; }
+		.card {
+			background: var(--card);
+			border: 1px solid var(--border);
+			border-radius: 10px;
+			padding: 20px;
+			margin-bottom: 20px;
+		}
+		form .grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+			gap: 16px;
+		}
+		label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
+		.hint { display: block; font-weight: 400; color: var(--muted); font-size: 0.8rem; }
+		input, select {
+			width: 100%;
+			padding: 8px 10px;
+			font: inherit;
+			color: var(--text);
+			background: var(--bg);
+			border: 1px solid var(--border);
+			border-radius: 6px;
+		}
+		button {
+			margin-top: 16px;
+			padding: 10px 22px;
+			font: inherit;
+			font-weight: 600;
+			color: #fff;
+			background: var(--accent);
+			border: 0;
+			border-radius: 6px;
+			cursor: pointer;
+		}
+		.errors { color: var(--error); margin: 0 0 16px; padding-left: 20px; }
+		.note { color: var(--muted); font-size: 0.9rem; margin: 12px 0 0; }
+		table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+		th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+		th:first-child, td:first-child { text-align: left; }
+		th { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+		.drawings { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+		figure { margin: 0; }
+		figure img { width: 100%; height: auto; }
+		figcaption { text-align: center; color: var(--muted); font-size: 0.9rem; }
+		h2 { font-size: 1.1rem; margin: 0 0 12px; }
+	</style>
 </head>
 <body>
-	<h1>Graph Coloring</h1>
+<main>
+	<h1>Online Graph Coloring</h1>
+	<p class="lede">
+		Vertices of a random k-colorable graph arrive one at a time, and each must get a color the moment it
+		arrives. Compare how many colors First-Fit and CBIP need against the k that would have been enough.
+	</p>
 
-<div class="main-container">
-	<form METHOD="POST">
+	<form method="POST" class="card">
 		{% if errors %}
-		<ul style="color: #b00020;">
+		<ul class="errors">
 			{% for error in errors %}<li>{{ error }}</li>{% endfor %}
 		</ul>
 		{% endif %}
-		<label for="chromatic-number">Chromatic number (k):</label>
-		<input type="number" id="chromatic-number" name="chromatic-number" min="1" max="10" value="{{ form.get('chromatic-number', 3) }}" required>
-	<label for="number-of-vertices">Number of vertices (n):</label>
-	<input type="number" id="number-of-vertices" name="number-of-vertices" min="1" max="500" value="{{ form.get('number-of-vertices', 30) }}" required>
+		<div class="grid">
+			<div>
+				<label for="coloring-method">Algorithm</label>
+				<select id="coloring-method" name="coloring-method">
+					<option value="first-fit">First-Fit</option>
+					<option value="cbip" {% if form.get('coloring-method') == 'cbip' %}selected{% endif %}>CBIP</option>
+					<option value="compare" {% if form.get('coloring-method') == 'compare' %}selected{% endif %}>Compare both</option>
+				</select>
+			</div>
+			<div>
+				<label for="chromatic-number">Chromatic number k <span class="hint">1–10</span></label>
+				<input type="number" id="chromatic-number" name="chromatic-number" min="1" max="10" value="{{ form.get('chromatic-number', 3) }}" required>
+			</div>
+			<div>
+				<label for="number-of-vertices">Vertices n <span class="hint">1–500</span></label>
+				<input type="number" id="number-of-vertices" name="number-of-vertices" min="1" max="500" value="{{ form.get('number-of-vertices', 30) }}" required>
+			</div>
+			<div>
+				<label for="number-of-instances">Graphs N <span class="hint">1–500</span></label>
+				<input type="number" id="number-of-instances" name="number-of-instances" min="1" max="500" value="{{ form.get('number-of-instances', 100) }}" required>
+			</div>
+			<div>
+				<label for="seed">Seed <span class="hint">optional, for repeatable runs</span></label>
+				<input type="number" id="seed" name="seed" value="{{ form.get('seed', '') }}">
+			</div>
+		</div>
+		<button type="submit">Run</button>
+		<p class="note">CBIP only works on bipartite graphs, so any run that includes it uses k = 2.</p>
+	</form>
 
-	<label for="number-of-instances">Number of instances (N):</label>
-	<input type="number" id="number-of-instances" name="number-of-instances" min="1" max="500" value="{{ form.get('number-of-instances', 100) }}" required>
+	{% if trials %}
+	<section class="card">
+		<h2>Competitive ratio over {{ trials.results[0].ratios|length }} graphs, n = {{ trials.n }}, k = {{ trials.k }}</h2>
+		{% if k_forced %}<p class="note">k was set to 2 because CBIP needs a bipartite graph.</p>{% endif %}
+		<table>
+			<thead>
+				<tr><th>Algorithm</th><th>Average</th><th>Best</th><th>Worst</th></tr>
+			</thead>
+			<tbody>
+				{% for result in trials.results %}
+				<tr>
+					<td>{{ result.label }}</td>
+					<td>{{ "%.3f"|format(result.average) }}</td>
+					<td>{{ "%.3f"|format(result.best) }}</td>
+					<td>{{ "%.3f"|format(result.worst) }}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+		<p class="note">Ratio = colors used ÷ k. A ratio of 1 means the algorithm did as well as an offline coloring.</p>
+	</section>
 
-	<label for="coloring-method">Coloring method:</label>
-	<select id="coloring-method" name="coloring-method">
-		<option value="first-fit">First fit</option>
-		<option value="cbip" {% if form.get('coloring-method') == 'cbip' %}selected{% endif %}>CBIP</option>
-	</select>
-    <p style="color: #555;">CBIP only works on bipartite graphs, so it always uses k = 2.</p>
-	<button type="submit">Check</button>
-</form>
-    {% if data is defined %}
- <div class="container">
-     <div class="data-container"> Method: {{ method }}, k = {{ k }}
-    </div>
- <div class="data-container">Average Competitive Ratio: {{ "%.3f"|format(data) }}
-    </div>
-
-	<div class="data-container"> Last generated graph ({{ last_colors }} colors)
-    </div>
- <div class="data-container">
-    {% if image %}
-    <img src="data:image/png;base64,{{ image }}" alt="The last generated graph, colored by the algorithm" style="max-width: 100%;">
-    {% else %}
-    Graphs this large aren't drawn.
-    {% endif %}
- </div>
- </div>
-     {% endif %}
-
-</div>
+	<section class="card">
+		<h2>The last graph</h2>
+		{% if drawings %}
+		<div class="drawings">
+			{% for label, used, image in drawings %}
+			<figure>
+				<img src="data:image/png;base64,{{ image }}" alt="The last graph, colored by {{ label }}">
+				<figcaption>{{ label }}: {{ used }} colors</figcaption>
+			</figure>
+			{% endfor %}
+		</div>
+		{% else %}
+		<p class="note">Graphs with more than 150 vertices aren't drawn.</p>
+		{% endif %}
+	</section>
+	{% endif %}
+</main>
 </body>
 </html>
-
-
-
-
-
-	

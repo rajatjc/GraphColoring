@@ -18,8 +18,10 @@ def run(client, **fields):
     return client.post("/", data=form)
 
 
-def ratio(response):
-    return float(re.search(r"Average Competitive Ratio: ([\d.]+)", response.get_data(as_text=True)).group(1))
+def averages(response):
+    """{algorithm label: average ratio} from the results table."""
+    rows = re.findall(r"<td>([\w-]+)</td>\s*<td>([\d.]+)</td>", response.get_data(as_text=True))
+    return {label: float(value) for label, value in rows}
 
 
 def test_form_renders(client):
@@ -28,18 +30,32 @@ def test_form_renders(client):
     assert b"Chromatic number" in response.data
 
 
-@pytest.mark.parametrize("method", ["first-fit", "cbip"])
-def test_run_shows_ratio_and_inline_image(client, method):
+@pytest.mark.parametrize("method, label", [("first-fit", "First-Fit"), ("cbip", "CBIP")])
+def test_run_shows_ratio_and_inline_image(client, method, label):
     response = run(client, coloring_method=method)
     assert response.status_code == 200
-    assert ratio(response) > 0
-    assert b"data:image/png;base64," in response.data
+    assert averages(response)[label] > 0
+    assert response.data.count(b"data:image/png;base64,") == 1
+
+
+def test_compare_runs_both_on_the_same_graphs(client):
+    response = run(client, coloring_method="compare", chromatic_number=4)
+    assert set(averages(response)) == {"First-Fit", "CBIP"}
+    assert response.data.count(b"data:image/png;base64,") == 2
+    assert b"k = 2" in response.data
+    assert b"k was set to 2" in response.data
 
 
 def test_cbip_always_uses_k_2(client):
     response = run(client, coloring_method="cbip", chromatic_number=7)
     assert response.status_code == 200
     assert b"k = 2" in response.data
+
+
+def test_seed_makes_runs_repeatable(client):
+    first = averages(run(client, coloring_method="compare", seed=123))
+    again = averages(run(client, coloring_method="compare", seed=123))
+    assert first == again
 
 
 def test_large_graphs_are_not_drawn(client):
@@ -54,7 +70,8 @@ def test_large_graphs_are_not_drawn(client):
     ({"chromatic_number": 0}, b"between 1 and 10"),
     ({"number_of_vertices": 5000}, b"between 1 and 500"),
     ({"number_of_vertices": 500, "number_of_instances": 500}, b"at most 100,000"),
-    ({"coloring_method": "greedy"}, b"Choose First Fit or CBIP"),
+    ({"coloring_method": "greedy"}, b"Choose First Fit, CBIP or Compare"),
+    ({"seed": "abc"}, b"Seed must be a whole number"),
 ])
 def test_bad_input_is_rejected_with_a_message(client, fields, message):
     response = run(client, **fields)
@@ -63,8 +80,9 @@ def test_bad_input_is_rejected_with_a_message(client, fields, message):
 
 
 def test_form_keeps_the_values_entered(client):
-    response = run(client, number_of_vertices=0)
+    response = run(client, number_of_vertices=0, coloring_method="compare")
     assert b'value="0"' in response.data
+    assert b'value="compare" selected' in response.data
 
 
 def test_no_file_is_written(client, tmp_path, monkeypatch):

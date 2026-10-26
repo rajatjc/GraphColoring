@@ -10,30 +10,33 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from flask import Flask, render_template, request
 
-from coloring import cbip, colors_used, first_fit, random_k_colorable
+from coloring.algorithms import colors_used
+from coloring.experiment import run_trials
 
 app = Flask(__name__)
 
-ALGORITHMS = {"first-fit": first_fit, "cbip": cbip}
+# What each choice in the "Algorithm" menu runs.
+METHODS = {"first-fit": ["first-fit"], "cbip": ["cbip"], "compare": ["first-fit", "cbip"]}
 
 # Bounds on the form inputs, so one request can't tie up the server.
 LIMITS = {"k": (1, 10), "n": (1, 500), "instances": (1, 500)}
-MAX_WORK = 100_000  # n * instances
+MAX_WORK = 100_000  # n * instances, per algorithm
 MAX_DRAWN_VERTICES = 150  # bigger graphs are unreadable as a picture
 
 
-def draw_graph(graph, coloring):
+def draw_graph(graph, coloring, layout):
     """Return a PNG of the graph, colored by `coloring`, as a base64 string."""
     G = nx.Graph()
     G.add_nodes_from(graph)
     G.add_edges_from((u, v) for u in graph for v in graph[u] if u < v)
 
-    fig, ax = plt.subplots(figsize=(7, 7))
-    nx.draw(G, nx.spring_layout(G, seed=1), ax=ax, with_labels=len(graph) <= 60,
-            node_color=[coloring[v] for v in G.nodes()], cmap=plt.cm.tab10, vmin=1, vmax=10,
-            node_size=300 if len(graph) <= 60 else 60, edge_color="#999999", font_color="white")
+    small = len(graph) <= 60
+    fig, ax = plt.subplots(figsize=(6, 6))
+    nx.draw(G, layout, ax=ax, with_labels=small, node_color=[coloring[v] for v in G.nodes()],
+            cmap=plt.cm.tab10, vmin=1, vmax=10, node_size=220 if small else 50,
+            edge_color="#7a8590", width=1.2, font_color="white", font_size=7)
     buffer = io.BytesIO()
-    fig.savefig(buffer, format="png", bbox_inches="tight")
+    fig.savefig(buffer, format="png", bbox_inches="tight", transparent=True)
     plt.close(fig)
     return base64.b64encode(buffer.getvalue()).decode()
 
@@ -54,8 +57,15 @@ def parse_form(form):
             errors.append(f"{label} must be between {low} and {high}.")
 
     values["method"] = form.get("coloring-method", "")
-    if values["method"] not in ALGORITHMS:
-        errors.append("Choose First Fit or CBIP.")
+    if values["method"] not in METHODS:
+        errors.append("Choose First Fit, CBIP or Compare.")
+
+    seed = form.get("seed", "").strip()
+    try:
+        values["seed"] = int(seed) if seed else None
+    except ValueError:
+        errors.append("Seed must be a whole number, or left empty.")
+
     if not errors and values["n"] * values["instances"] > MAX_WORK:
         errors.append(f"Vertices × instances must be at most {MAX_WORK:,}.")
     return values, errors
@@ -70,20 +80,22 @@ def graph_coloring():
     if errors:
         return render_template("index.html", form=request.form, errors=errors), 400
 
-    # CBIP is defined for bipartite graphs, so its graphs are always 2-colorable.
-    k = 2 if values["method"] == "cbip" else values["k"]
-    algorithm = ALGORITHMS[values["method"]]
-    rng = random.Random()
+    algorithms = METHODS[values["method"]]
+    # CBIP is defined for bipartite graphs, so any run that includes it uses k = 2.
+    k = 2 if "cbip" in algorithms else values["k"]
+    trials = run_trials(algorithms, values["n"], k, values["instances"], random.Random(values["seed"]))
 
-    ratios = []
-    for _ in range(values["instances"]):
-        graph = random_k_colorable(values["n"], k, rng=rng)
-        coloring = algorithm(graph)
-        ratios.append(colors_used(coloring) / k)
+    drawings = []
+    if values["n"] <= MAX_DRAWN_VERTICES:
+        # Same positions in every drawing, spread out enough that nodes don't overlap.
+        G = nx.Graph(trials.last_graph)
+        layout = nx.spring_layout(G, seed=1, k=2.5 / max(len(G), 1) ** 0.5, iterations=100)
+        for result in trials.results:
+            coloring = trials.last_colorings[result.algorithm]
+            drawings.append((result.label, colors_used(coloring), draw_graph(trials.last_graph, coloring, layout)))
 
-    image = draw_graph(graph, coloring) if values["n"] <= MAX_DRAWN_VERTICES else None
-    return render_template("index.html", form=request.form, method=values["method"], k=k,
-                           data=sum(ratios) / len(ratios), image=image, last_colors=colors_used(coloring))
+    return render_template("index.html", form=request.form, trials=trials, drawings=drawings,
+                           k_forced=k != values["k"])
 
 
 if __name__ == "__main__":
