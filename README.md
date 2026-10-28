@@ -1,113 +1,128 @@
-# Comparative Analysis of Online Graph Coloring Problem
+# Online Graph Coloring: First-Fit vs CBIP
 
-## Table of Contents
+[![CI](https://github.com/rajatjc/GraphColoring/actions/workflows/ci.yml/badge.svg)](https://github.com/rajatjc/GraphColoring/actions/workflows/ci.yml)
 
-- [Problem Description](#problem-description)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Implementation](#implementation)
-- [Algorithms](#algorithms)
-- [Graph Generation](#graph-generation)
-- [Results](#results)
-- [Conclusion](#conclusion)
-- [References](#references)
+In **online** graph coloring the vertices arrive one at a time. When a vertex arrives you see only its
+edges to vertices that came earlier, and you must give it a color right away and never change it. This
+project measures how much that costs two classic algorithms: how many colors they use on random
+k-colorable graphs, compared with the k colors an offline algorithm could get away with.
 
-## Problem Description
+It has three parts: a small library (`coloring/`), a web app for trying single runs, and a study script
+that reproduces the experiments.
 
-This project focuses on the Online Graph Coloring Problem, a well-known problem in graph theory. The objective is to assign colors to vertices as they arrive online while minimizing the number of colors used and ensuring adjacent vertices have different colors. Two algorithms, First-Fit and CBIP, are studied for coloring online graphs.
+![The web app comparing First-Fit and CBIP on the same 24-vertex bipartite graph](screenshot.png)
 
-## Installation
+## The algorithms
 
-To run the project locally, follow these steps:
+**First-Fit** gives each arriving vertex the smallest color not already used by one of its earlier
+neighbours. It is simple and usually fine, but an adversary can make it use n/2 colors on a graph that
+needs 2. The tests build that graph (K(m,m) minus a perfect matching, arriving a₀, b₀, a₁, b₁, …).
 
-1. Clone the repository:
+**CBIP** (Coloring Based on Interval Partitioning) works on bipartite graphs. When v arrives it splits
+the component containing v (in the graph revealed so far) into its two sides, and gives v the smallest
+color not used on the opposite side. That guarantees O(log n) colors on bipartite graphs. On the same
+adversarial graph, the tests check it stays under 2·log₂ n. It is only defined for k = 2.
 
-   ```bash
-   git clone https://github.com/rajatjc/GraphColoring.git
-   ```
+**The graphs.** `random_k_colorable(n, k)` puts vertex i in class i mod k and joins each pair of vertices
+from different classes with probability p. A fresh p is drawn uniformly for each graph, as in the
+original study. Vertices arrive in order 0, 1, 2, …
 
-2. Navigate to the project directory:
-
-   ```bash
-   cd GraphColoring
-   ```
-
-3. Install the required packages using pip:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Run the Flask application:
-
-   ```bash
-   python app.py
-   ```
-
-5. Open your web browser and navigate to `http://127.0.0.1:5000/` to access the application.
-
-## Usage
-
-1. Open your web browser and navigate to `http://127.0.0.1:5000/`.
-2. Enter the desired parameters in the UI:
-   - Chromatic number (k)
-   - Number of vertices (n)
-   - Number of instances (N)
-   - Choose an algorithm: "First Fit" or "CBIP"
-3. Click the "Check" button to generate graphs and analyze results.
-4. View the generated graph, coloring method used, and average competitive ratio.
-
-## Implementation
-      
-
-### Backend (Python Flask)
-
-- **Graph Generation:** Implemented a function to generate k-colorable online graphs based on user input using the Flask framework.
-- **Coloring Algorithm:** Implemented First-Fit and CBIP algorithms as separate functions to color online graphs.
-- **Routing:** Set up Flask routes to handle API requests for graph generation and running the coloring algorithms.
-
-### Frontend (HTML, CSS, JavaScript)
-
-- **User Interface:** Designed an interactive UI with input options for chromatic number (k), number of vertices (n), and instances (N).
-- **Visualization:** Utilized D3.js to visualize the online graph generation process, algorithm results, competitive ratio, and statistics.
-- **API Calls:** Implemented JavaScript functions to make asynchronous calls to Flask APIs for processing and displaying results.
-
-## Algorithms
-
-### Greedy Algorithms
-
-Greedy algorithms make locally optimal choices at each step with the hope of reaching a global optimum solution. Two algorithms are studied:
-
-1. **First-Fit Graph Coloring Algorithm:** Assigns the first available color not used by neighboring vertices.
-2. **CBIP Greedy Graph Coloring Algorithm:** Assigns colors using bipartite partitioning.
-
-## Graph Generation
-
-Graphs are generated to be k-colorable, allowing efficient testing of k-coloring algorithms. The vertices are partitioned into subsets, and edges are added with a probability p to create a random graph.
+**The competitive ratio** reported for one graph is colors used ÷ k. The true chromatic number can be
+below k (for example when p is small), so this is a lower bound on the real ratio.
 
 ## Results
 
-### First-Fit Greedy Graph Coloring Algorithm
+From `python -m coloring.study --instances 300` (seed 2023). Each point averages 300 random graphs.
 
-- **N=100:** Comparisons of competitive ratios for various k and n values are presented.
-- **N=1000:** Competitive ratios for k=2,3,4 are compared, demonstrating the algorithm's behavior.
+![Average competitive ratio of First-Fit for k = 2, 3, 4, and of CBIP vs First-Fit on bipartite graphs](results/ratios.png)
 
-### CBIP Greedy Graph Coloring Algorithm
+| First-Fit, average ratio | n = 50 | 100 | 200 | 400 | 800 | 1000 | 1600 |
+|---|---|---|---|---|---|---|---|
+| k = 2 | 1.59 | 1.81 | 1.90 | 2.00 | 2.33 | 2.38 | 2.43 |
+| k = 3 | 1.69 | 2.04 | 2.44 | 2.69 | 3.05 | 3.67 | 3.75 |
+| k = 4 | 1.67 | 2.01 | 2.57 | 3.20 | 3.69 | 4.31 | 4.79 |
 
-- **N=100:** Competitive ratios for k=2 are analyzed across varying n values.
-- **Time Complexity:** CBIP's exponential time complexity for higher k values is discussed.
+On the same bipartite graphs (k = 2):
 
-## Conclusion
+| n | 20 | 40 | 60 | 80 | 100 |
+|---|---|---|---|---|---|
+| First-Fit, average | 1.34 | 1.56 | 1.65 | 1.71 | 1.76 |
+| CBIP, average | 1.34 | 1.47 | 1.50 | 1.53 | 1.49 |
+| First-Fit, worst | 2.5 | 4.0 | 3.5 | 4.0 | 5.0 |
+| CBIP, worst | 2.5 | 3.0 | 3.0 | 2.5 | 2.5 |
 
-This study empirically explores the average competitive ratios of First-Fit and CBIP algorithms. Insights are drawn on their performance, limitations, and computational practicality.
+- First-Fit's ratio keeps growing with n, and faster for larger k.
+- On small bipartite graphs the two are level. From about n = 40, CBIP needs fewer colors on average
+  and has a much better worst case. At n = 100 it never used more than 5 colors, while First-Fit
+  needed up to 10.
+- The full numbers are in [`results/first_fit.csv`](results/first_fit.csv) and
+  [`results/cbip.csv`](results/cbip.csv). The original notebooks are in `ipynb/`.
 
+## Run it
+
+Requires Python 3.12 or newer.
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+python app.py                                 # web app on http://127.0.0.1:5000
+python -m coloring.study                      # rerun the study (100 graphs per point, a couple of minutes)
+python -m coloring.study --instances 1000     # the original N = 1000 (about 20 minutes)
+```
+
+In the web app, pick First-Fit, CBIP or **Compare both**, which runs both algorithms on the same graphs
+and draws the last graph twice in the same layout. Add a seed to repeat a run exactly. Inputs are capped
+at k ≤ 10, n ≤ 500, N ≤ 500 and n × N ≤ 100,000 per request.
+
+With Docker:
+
+```bash
+docker build -t graphcoloring . && docker run -p 8000:8000 graphcoloring
+```
+
+Using the library directly:
+
+```python
+import random
+from coloring import random_k_colorable, first_fit, cbip, colors_used
+
+graph = random_k_colorable(100, 2, rng=random.Random(1))
+print(colors_used(first_fit(graph)), colors_used(cbip(graph)))
+```
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+37 tests cover the algorithms (proper colorings on random graphs, the First-Fit lower bound, CBIP's
+log bound and odd-cycle check, the generator's guarantees), the experiment runner, the study script and
+the web app's validation and output. GitHub Actions runs them on Python 3.12 and 3.13, then builds the
+Docker image and runs a comparison against it.
+
+## Layout
+
+```
+coloring/
+  graphs.py        random k-colorable graph generator
+  algorithms.py    first_fit, cbip, is_proper
+  experiment.py    run several algorithms on the same random graphs and summarise ratios
+  study.py         the sweep behind results/
+app.py             Flask app (templates/index.html)
+tests/
+results/           CSVs and chart from the study
+ipynb/             the original notebooks
+```
 
 ## References
 
-A list of references is provided for the algorithms and concepts used in the project.
-
-[1] Li, Y., Narayan, V.V., Pankratov, D. (2022). Online Coloring and a New Type of Adversary for Online Graph Problems. Algorithmica 84(4), 1232-1251.
-
-[2] Erdős, P., R’enyi, A. (1959). On random graphs I. Publicationes Mathematicae, 6, 290-297.
-
-[3] Kierstead, H., Smith, D., Trotter, W. (2015). First-fit coloring on interval graphs has performance ratio at least 5. European Journal of Combinatorics, 51.
+1. Li, Y., Narayan, V. V., Pankratov, D. (2022). Online Coloring and a New Type of Adversary for Online
+   Graph Problems. *Algorithmica* 84(4), 1232–1251.
+2. Lovász, L., Saks, M., Trotter, W. T. (1989). An on-line graph coloring algorithm with sublinear
+   performance ratio. *Discrete Mathematics* 75, 319–325.
+3. Erdős, P., Rényi, A. (1959). On random graphs I. *Publicationes Mathematicae* 6, 290–297.
+4. Kierstead, H., Smith, D., Trotter, W. (2015). First-fit coloring on interval graphs has performance
+   ratio at least 5. *European Journal of Combinatorics* 51.
