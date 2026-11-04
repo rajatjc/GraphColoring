@@ -41,6 +41,22 @@ def draw_graph(graph, coloring, layout):
     return base64.b64encode(buffer.getvalue()).decode()
 
 
+def graph_payload(graph, layout, trials):
+    """The last graph as plain JSON for the page to animate.
+
+    Vertices arrive in order 0, 1, 2, ... so the page replays them in that order; each run lists the
+    color every vertex was given, indexed by vertex.
+    """
+    vertices = sorted(graph)
+    return {
+        "nodes": [[float(layout[v][0]), float(layout[v][1])] for v in vertices],
+        "edges": sorted([u, v] for u in graph for v in graph[u] if u < v),
+        "runs": [{"label": result.label,
+                  "colors": [trials.last_colorings[result.algorithm][v] for v in vertices]}
+                 for result in trials.results],
+    }
+
+
 def parse_form(form):
     """Validate the form. Returns (values, errors)."""
     values, errors = {}, []
@@ -86,6 +102,7 @@ def graph_coloring():
     trials = run_trials(algorithms, values["n"], k, values["instances"], random.Random(values["seed"]))
 
     drawings = []
+    graph_data = None
     if values["n"] <= MAX_DRAWN_VERTICES:
         # Same positions in every drawing, spread out enough that nodes don't overlap.
         G = nx.Graph(trials.last_graph)
@@ -93,9 +110,10 @@ def graph_coloring():
         for result in trials.results:
             coloring = trials.last_colorings[result.algorithm]
             drawings.append((result.label, colors_used(coloring), draw_graph(trials.last_graph, coloring, layout)))
+        graph_data = graph_payload(trials.last_graph, layout, trials)
 
     return render_template("index.html", form=request.form, trials=trials, drawings=drawings,
-                           k_forced=k != values["k"])
+                           graph_data=graph_data, k_forced=k != values["k"])
 
 
 if __name__ == "__main__":

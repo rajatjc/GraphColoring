@@ -7,10 +7,37 @@ edges to vertices that came earlier, and you must give it a color right away and
 project measures how much that costs two classic algorithms: how many colors they use on random
 k-colorable graphs, compared with the k colors an offline algorithm could get away with.
 
-It has three parts: a small library (`coloring/`), a web app for trying single runs, and a study script
-that reproduces the experiments.
+It has three parts: a small library (`coloring/`), a web app where you can watch the algorithms work, and
+a study script that reproduces the experiments.
 
-![The web app comparing First-Fit and CBIP on the same 24-vertex bipartite graph](screenshot.png)
+![First-Fit and CBIP coloring the same 40-vertex graph as the vertices arrive, in dark mode](docs/screenshots/animation-dark.png)
+
+## The web app
+
+Pick First-Fit, CBIP or **Compare both**, choose how many vertices and how many random graphs to average
+over, and run it. You get the competitive ratio for each algorithm, and then the last graph of the run,
+replayed one vertex at a time.
+
+- **Watch it happen.** Vertices arrive in order. Each one pops in, receives a color and keeps it, and its
+  edges draw in from the new vertex. The corner shows how many vertices have arrived and how many colors
+  are in use.
+- **Control the replay.** Play, pause, replay, scrub to any step, or run at 0.5×, 1×, 2× or 4×.
+- **Move the vertices.** Drag any vertex to untangle the picture. In compare mode both panels share one
+  layout, so they stay in step. *Reset layout* puts everything back.
+- **Light and dark.** The toggle in the header remembers your choice and otherwise follows your system.
+- **Repeatable.** Add a seed and the same run comes back exactly.
+
+| Setting up a run | Results, light mode |
+|---|---|
+| ![The run form in light mode](docs/screenshots/form-light.png) | ![Competitive ratio for both algorithms, with the animated graphs below](docs/screenshots/results-light.png) |
+
+| Results, dark mode | On a phone |
+|---|---|
+| ![Competitive ratio and graphs in dark mode](docs/screenshots/results-dark.png) | ![The animated graph on a phone-sized screen](docs/screenshots/mobile-dark.png) |
+
+Inputs are capped at k ≤ 10, n ≤ 500, N ≤ 500 and n × N ≤ 100,000 per request. Graphs with more than 150
+vertices are not drawn. With JavaScript off, the page shows a still picture of the last graph instead of
+the animation.
 
 ## The algorithms
 
@@ -21,11 +48,13 @@ needs 2. The tests build that graph (K(m,m) minus a perfect matching, arriving a
 **CBIP** (Coloring Based on Interval Partitioning) works on bipartite graphs. When v arrives it splits
 the component containing v (in the graph revealed so far) into its two sides, and gives v the smallest
 color not used on the opposite side. That guarantees O(log n) colors on bipartite graphs. On the same
-adversarial graph, the tests check it stays under 2·log₂ n. It is only defined for k = 2.
+adversarial graph, the tests check it stays under 2·log₂ n. It is only defined for k = 2, so any run that
+includes CBIP uses k = 2.
 
 **The graphs.** `random_k_colorable(n, k)` puts vertex i in class i mod k and joins each pair of vertices
 from different classes with probability p. A fresh p is drawn uniformly for each graph, as in the
-original study. Vertices arrive in order 0, 1, 2, …
+original study. Vertices arrive in order 0, 1, 2, … Because p is random, some graphs are very sparse,
+which is why the best ratio in a run can be below 1.
 
 **The competitive ratio** reported for one graph is colors used ÷ k. The true chromatic number can be
 below k (for example when p is small), so this is a lower bound on the real ratio.
@@ -71,9 +100,8 @@ python -m coloring.study                      # rerun the study (100 graphs per 
 python -m coloring.study --instances 1000     # the original N = 1000 (about 20 minutes)
 ```
 
-In the web app, pick First-Fit, CBIP or **Compare both**, which runs both algorithms on the same graphs
-and draws the last graph twice in the same layout. Add a seed to repeat a run exactly. Inputs are capped
-at k ≤ 10, n ≤ 500, N ≤ 500 and n × N ≤ 100,000 per request.
+On macOS, port 5000 is often taken by AirPlay Receiver. If the page won't load, run the app on another
+port instead: `flask --app app run -p 5003`.
 
 With Docker:
 
@@ -100,8 +128,9 @@ pytest
 
 37 tests cover the algorithms (proper colorings on random graphs, the First-Fit lower bound, CBIP's
 log bound and odd-cycle check, the generator's guarantees), the experiment runner, the study script and
-the web app's validation and output. GitHub Actions runs them on Python 3.12 and 3.13, then builds the
-Docker image and runs a comparison against it.
+the web app's validation and output. The animation itself runs in the browser and is not covered by the
+test suite. GitHub Actions runs the tests on Python 3.12 and 3.13, then builds the Docker image and runs
+a comparison against it.
 
 ## Layout
 
@@ -111,9 +140,12 @@ coloring/
   algorithms.py    first_fit, cbip, is_proper
   experiment.py    run several algorithms on the same random graphs and summarise ratios
   study.py         the sweep behind results/
-app.py             Flask app (templates/index.html)
+app.py             Flask app: validates the form, runs the trials, sends the graph to the page
+templates/
+  index.html       the whole UI: styles, theme toggle, and the canvas animation
 tests/
 results/           CSVs and chart from the study
+docs/screenshots/  images used in this README
 ipynb/             the original notebooks
 ```
 
