@@ -82,7 +82,7 @@ def test_bad_input_is_rejected_with_a_message(client, fields, message):
 def test_form_keeps_the_values_entered(client):
     response = run(client, number_of_vertices=0, coloring_method="compare")
     assert b'value="0"' in response.data
-    assert b'value="compare" selected' in response.data
+    assert b'value="compare" checked' in response.data
 
 
 def test_no_file_is_written(client, tmp_path, monkeypatch):
